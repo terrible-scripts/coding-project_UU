@@ -89,38 +89,36 @@ def piecewiseNonLinearInterp(fitOrder, fitWindow, fitRange, timeLowAvg, currentL
     timeFit = []
     currentLowFit = []
     currentHighFit = []
-    fitStart=1
     xRange = []
     yRange = []
     P = []
 
     if startCheck == 0:
-        for i in range(fitStart, fitRange-fitWindow):
+        for i in range(0, fitRange-fitWindow):
             timeFit.append(timeLowAvg[i+2])
             currentLowFit.append(currentLowAvg[i+2]) # do something about this 2
             xRange[:] = []
             yRange[:] = []
-            P[:] = []
+            del P
             for j in range(0, fitWindow):
                 xRange.append(timeHighAvg[i+j])
                 yRange.append(currentHighAvg[i+j])
-            
             P = np.polyfit(xRange, yRange, fitOrder)
-            currentHighFit.append(np.polyval(P,timeFit[i-fitStart]))
-            currentHighFit.append(currentHighAvg(i+2))
-            timeFit.append(timeHighAvg(i+2))
+            currentHighFit.append(np.polyval(P,timeFit[len(timeFit)-1]))
+            currentHighFit.append(currentHighAvg[i+2])
+            timeFit.append(timeHighAvg[i+2])
             xRange[:] = []
             yRange[:] = []
-            P[:] = []
+            del P
             for j in range(0, fitWindow):
-                xRange.append(timeLowAvg(i+j))
-                yRange.append(currentLowAvg(i+j))
+                xRange.append(timeLowAvg[i+j])
+                yRange.append(currentLowAvg[i+j])
     
             P = np.polyfit(xRange, yRange, fitOrder)
-            currentLowFit.append(np.polyval(P, timeFit[i-fitStart]))
+            currentLowFit.append(np.polyval(P, timeFit[len(timeFit)-1]))
     
     else:
-        for i in range(fitStart, fitRange-fitWindow):
+        for i in range(0, fitRange-fitWindow):
             timeFit.append(timeHighAvg[i+2])
             currentHighFit.append(currentHighAvg[i+2])
             xRange[:] = []
@@ -131,24 +129,34 @@ def piecewiseNonLinearInterp(fitOrder, fitWindow, fitRange, timeLowAvg, currentL
                 yRange.append(currentLowAvg[i+j])
 
             P = np.polyfit(xRange, yRange, fitOrder)
-            print(P)
-            print(yRange)
-            print(np.polyval(P,timeFit[i-fitStart]))
-            currentLowFit.append(np.polyval(P,timeFit[i-fitStart]))
+            currentLowFit.append(np.polyval(P,timeFit[len(timeFit)-1]))
             currentLowFit.append(currentLowAvg[i+2])
             timeFit.append(timeLowAvg[i+2])
             xRange[:] = []
             yRange[:] = []
             del P
             for j in range(0, fitWindow):
-                xRange.append(timeHighAvg[i+j])
-                yRange.append(currentHighAvg[i+j])
+                xRange.append(timeHighAvg[i+j+1])
+                yRange.append(currentHighAvg[i+j+1])
             
             P = np.polyfit(xRange, yRange, fitOrder)
-            currentHighFit.append(np.polyval(P, timeFit[i-fitStart]))
+            currentHighFit.append(np.polyval(P, timeFit[len(timeFit)-1]))
     a = np.array(currentLowFit)
     return timeFit, currentLowFit, currentHighFit
 
+def extractSignal (timeFit, currentLowFit, currentHighFit):
+    currentLowFit = np.array(currentLowFit)
+    currentHighFit = np.array(currentHighFit)
+    delta_I = currentHighFit - currentLowFit
+
+    visc = 0.8 * 10**-3
+    leng = 5.4 * 10**-2
+    area = 490 * 10**-12
+    perm = 681.85 * 10**-12
+    delta_P = (3-1.5) * 10**5
+    zetaPotential =10**-9*delta_I*leng*visc/(area*perm*delta_P)
+
+    return delta_I, zetaPotential
 # Data import
 inputCol1 = 0
 inputCol2 = 1
@@ -182,45 +190,50 @@ fitOrder = 3
 fitWindow = 4
 fitRange = len(timeLowAvg) if len(timeLowAvg) < len(timeHighAvg) else len(timeHighAvg)
 timeFit, currentLowFit, currentHighFit = piecewiseNonLinearInterp(fitOrder, fitWindow, fitRange, timeLowAvg, currentLowAvg, timeHighAvg, currentHighAvg, startCheck)
-# print(timeFit)
-print(len(timeFit))
-print(len(currentLowFit))
-print(len(currentHighFit))
 
-# Plot the results
-plt.figure(1)
-plt.plot(timeIn, currentIn,'o-')
-plt.ylabel('Current (pA)')
-plt.xlabel('Time (min)')
-plt.show()
+# Extract the signal
+delta_I, zetaPotential = extractSignal(timeFit, currentLowFit, currentHighFit)
 
-plt.figure(2)
-plt.plot(timeSelect, currentSelect,'.')
-plt.ylabel('Current (pA)')
-plt.xlabel('Time (min)')
-plt.show()
+# # Plot the results
+# plt.figure(1)
+# plt.plot(timeIn, currentIn,'o-')
+# plt.ylabel('Current (pA)')
+# plt.xlabel('Time (min)')
+# plt.show()
 
-plt.figure(3)
-plt.plot(timeRefine, currentRefine,'.')
-plt.ylabel('Current (pA)')
-plt.xlabel('Time (min)')
-plt.show()
+# plt.figure(2)
+# plt.plot(timeSelect, currentSelect,'.')
+# plt.ylabel('Current (pA)')
+# plt.xlabel('Time (min)')
+# plt.show()
 
-plt.figure(4)
-plt.plot(timeLow, currentLow,'r', timeHigh, currentHigh, 'b')
-plt.ylabel('Current (pA)')
-plt.xlabel('Time (min)')
-plt.show()
+# plt.figure(3)
+# plt.plot(timeRefine, currentRefine,'.')
+# plt.ylabel('Current (pA)')
+# plt.xlabel('Time (min)')
+# plt.show()
 
-plt.figure(5)
-plt.plot(timeLowAvg, currentLowAvg,'.', timeHighAvg, currentHighAvg, '.')
-plt.ylabel('Current (pA)')
-plt.xlabel('Time (min)')
-plt.show()
+# plt.figure(4)
+# plt.plot(timeLow, currentLow,'r', timeHigh, currentHigh, 'b')
+# plt.ylabel('Current (pA)')
+# plt.xlabel('Time (min)')
+# plt.show()
 
-plt.figure(6)
-plt.plot(timeFit, currentLowFit,'o-')#, timeFit, currentHighFit, 'o-')
-plt.ylabel('Current (pA)')
+# plt.figure(5)
+# plt.plot(timeLowAvg, currentLowAvg,'.', timeHighAvg, currentHighAvg, '.')
+# plt.ylabel('Current (pA)')
+# plt.xlabel('Time (min)')
+# plt.show()
+
+# plt.figure(6)
+# plt.plot(timeFit, currentLowFit,'o-', timeFit, currentHighFit, 'o-')
+# plt.ylabel('Current (pA)')
+# plt.xlabel('Time (min)')
+# plt.show()
+
+plt.figure(7)
+plt.plot(timeFit, zetaPotential, 'o-')
+plt.ylabel('Zeta Potential (mV)')
 plt.xlabel('Time (min)')
 plt.show()
 
