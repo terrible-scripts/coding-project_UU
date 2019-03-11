@@ -2,6 +2,7 @@ import os
 os.system("cls")
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.signal as sp
 
 # # Profiler start
 # import cProfile, pstats, io
@@ -156,7 +157,9 @@ def extractSignal (timeFit, currentLowFit, currentHighFit):
     delta_P = (3-1.5) * 10**5
     zetaPotential =10**-9*delta_I*leng*visc/(area*perm*delta_P)
 
-    return delta_I, zetaPotential
+    filtZeta = sp.savgol_filter(zetaPotential, 19, 3)
+    return delta_I, filtZeta
+
 # Data import
 inputCol1 = 0
 inputCol2 = 1
@@ -165,7 +168,7 @@ fileName = 'input_data.txt'
 timeIn, currentIn = dataImport(inputCol1, inputCol2, delim, fileName)
 
 # Data Selection
-selectRange1 = [0,1236]
+selectRange1 = [610,1236]
 selectRange2 = [1341,2441]
 selectRange3 = [2483,3203]
 timeSelect, currentSelect = dataSelector(selectRange1, selectRange2, selectRange3)
@@ -194,47 +197,74 @@ timeFit, currentLowFit, currentHighFit = piecewiseNonLinearInterp(fitOrder, fitW
 # Extract the signal
 delta_I, zetaPotential = extractSignal(timeFit, currentLowFit, currentHighFit)
 
-# # Plot the results
-# plt.figure(1)
-# plt.plot(timeIn, currentIn,'o-')
-# plt.ylabel('Current (pA)')
-# plt.xlabel('Time (min)')
+# Plot the results
+plt.figure(1)
+plt.plot(timeIn, currentIn,'.-', linewidth = 0.3)
+plt.title('Raw input data')
+plt.ylabel('Streaming Current (pA)')
+plt.xlabel('Time (min)')
+plt.grid()
+plt.savefig('1a_input_data.png')
+
+plt.figure(2)
+plt.plot(timeIn, currentIn,'o-')
+plt.title('Raw input data (Zoomed version)')
+plt.ylabel('Streaming Current (pA)')
+plt.xlabel('Time (min)')
+plt.xlim(18, 20)
+plt.ylim(450, 520)
+plt.grid()
+plt.savefig('1b_zomed_input_data.png')
 # plt.show()
 
-# plt.figure(2)
-# plt.plot(timeSelect, currentSelect,'.')
-# plt.ylabel('Current (pA)')
-# plt.xlabel('Time (min)')
-# plt.show()
+plt.figure(3)
+plt.plot(timeSelect, currentSelect,'.')
+plt.title('Selected Data')
+plt.ylabel('Streaming Current (pA)')
+plt.xlabel('Time (min)')
+plt.grid()
+plt.savefig('2_selected_data')
 
-# plt.figure(3)
-# plt.plot(timeRefine, currentRefine,'.')
-# plt.ylabel('Current (pA)')
-# plt.xlabel('Time (min)')
-# plt.show()
+plt.figure(4)
+plt.plot(timeRefine, currentRefine,'.-', linewidth = 0.3)
+plt.title('Refined Data')
+plt.ylabel('Streaming Current (pA)')
+plt.xlabel('Time (min)')
+plt.grid()
+plt.savefig('3_refined_data')
 
-# plt.figure(4)
-# plt.plot(timeLow, currentLow,'r', timeHigh, currentHigh, 'b')
-# plt.ylabel('Current (pA)')
-# plt.xlabel('Time (min)')
-# plt.show()
+plt.figure(5)
+plt.plot(timeLow, currentLow,'r.', timeHigh, currentHigh, 'b.')
+plt.title('Segregated Data')
+plt.ylabel('Current (pA)')
+plt.xlabel('Time (min)')
+plt.grid()
+plt.savefig('4_segregated_data')
 
-# plt.figure(5)
-# plt.plot(timeLowAvg, currentLowAvg,'.', timeHighAvg, currentHighAvg, '.')
-# plt.ylabel('Current (pA)')
-# plt.xlabel('Time (min)')
-# plt.show()
-
-# plt.figure(6)
-# plt.plot(timeFit, currentLowFit,'o-', timeFit, currentHighFit, 'o-')
-# plt.ylabel('Current (pA)')
-# plt.xlabel('Time (min)')
-# plt.show()
+plt.figure(6)
+plt.plot(timeLowAvg, currentLowAvg,'.', timeHighAvg, currentHighAvg, '.')
+plt.title('Averaged over each pulse')
+plt.ylabel('Current (pA)')
+plt.xlabel('Time (min)')
+plt.grid()
+plt.savefig('5_averaged_data')
 
 plt.figure(7)
-plt.plot(timeFit, zetaPotential, 'o-')
+plt.plot(timeFit, currentLowFit,'o-', timeFit, currentHighFit, 'o-')
+plt.title('Fitted piecewise')
+plt.ylabel('Current (pA)')
+plt.xlabel('Time (min)')
+plt.grid()
+plt.savefig('6_fitted_data')
+
+plt.figure(8)
+plt.plot(timeFit, zetaPotential, '-')
+plt.title('Zeta Signal')
 plt.ylabel('Zeta Potential (mV)')
 plt.xlabel('Time (min)')
+plt.grid()
+plt.savefig('7_signal_data')
+
 plt.show()
 
 # # Profiler end
