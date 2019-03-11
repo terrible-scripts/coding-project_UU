@@ -14,13 +14,13 @@ import scipy.signal as sp
 # import time
 # start_time = time.time()
 
-def dataImport(inputCol1, inputCol2, delim, fileName):
+def dataImport(inputCol1, inputCol2, startRow, delim, fileName):
     timeIn=[] 
     currentIn = []
     data = np.genfromtxt(fileName, delimiter=delim)
     data = np.array(data)
-    timeIn = data[:,][:,inputCol1]/60.0
-    currentIn = data[:,][:,inputCol2]*10**12
+    timeIn = data[startRow::,inputCol1]/60.0
+    currentIn = data[startRow::,inputCol2]*10**12
     timeIn = np.array(timeIn, dtype=np.float64)
     currentIn = np.array(currentIn, dtype=np.float64)
     return (timeIn, currentIn)
@@ -163,9 +163,10 @@ def extractSignal (timeFit, currentLowFit, currentHighFit):
 # Data import
 inputCol1 = 0
 inputCol2 = 1
+startRow = 1
 delim = '\t'
-fileName = 'input_data.txt'
-timeIn, currentIn = dataImport(inputCol1, inputCol2, delim, fileName)
+fileName = 'input_data_with-header.txt'
+timeIn, currentIn = dataImport(inputCol1, inputCol2, startRow, delim, fileName)
 
 # Data Selection
 selectRange1 = [610,1236]
@@ -205,6 +206,7 @@ plt.ylabel('Streaming Current (pA)')
 plt.xlabel('Time (min)')
 plt.grid()
 plt.savefig('1a_input_data.png')
+# plt.show()
 
 plt.figure(2)
 plt.plot(timeIn, currentIn,'o-')
@@ -218,7 +220,7 @@ plt.savefig('1b_zomed_input_data.png')
 # plt.show()
 
 plt.figure(3)
-plt.plot(timeSelect, currentSelect,'.')
+plt.plot(timeSelect, currentSelect,'.-', linewidth = 0.3)
 plt.title('Selected Data')
 plt.ylabel('Streaming Current (pA)')
 plt.xlabel('Time (min)')
