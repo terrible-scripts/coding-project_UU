@@ -15,22 +15,34 @@ import scipy.signal as sp
 # start_time = time.time()
 
 def dataImport(inputCol1, inputCol2, startRow, delim, fileName):
-    timeIn=[] 
-    currentIn = []
+    """ Function to import the two relevant columns from the input file. Possible to specify the delimiter used, and the starting row of 
+    the data (after the header). """
+
+    timeIn=[]       # stores the time data
+    currentIn = []  # stores the current data
     data = np.genfromtxt(fileName, delimiter=delim)
     data = np.array(data)
-    timeIn = data[startRow::,inputCol1]/60.0
-    currentIn = data[startRow::,inputCol2]*10**12
+    timeIn = data[startRow::,inputCol1]/60.0        # converts input time into minutes
+    currentIn = data[startRow::,inputCol2]*10**12   # converts input current into pico-amperes
     timeIn = np.array(timeIn, dtype=np.float64)
     currentIn = np.array(currentIn, dtype=np.float64)
     return (timeIn, currentIn)
 
 def dataSelector(selectRange1, selectRange2, selectRange3):
+    """ The input data has 3 parts - initial and final baselines and the biomolecule binding portions. 
+    Some portions of the data need to be excluded from the analysis, such as the initial drift in the baseline,
+    and the disturbances introduced during sample changing, or any adjustment to the system (the measurement is typically not
+    stopped during this as the pause in the measurement may introduce additional drift after it is resumed). """
+
     timeSelect = np.concatenate([timeIn[selectRange1[0]:selectRange1[1]:], timeIn[selectRange2[0]:selectRange2[1]:], timeIn[selectRange3[0]:selectRange3[1]:]])
     currentSelect = np.concatenate([currentIn[selectRange1[0]:selectRange1[1]:], currentIn[selectRange2[0]:selectRange2[1]:], currentIn[selectRange3[0]:selectRange3[1]:]])
     return timeSelect, currentSelect
 
 def noiseRemover(timeSelect, currentSelect, intraPulseNoise, interPulseNoise):
+    """ Our experiments involve a current pulse alternating between two values of current. There are 2 major types of noise that we encounter:
+    one that occurs due to the background , intraPulseNoise; and one that occurs during te switch between currents, interPulseNoise. Both these 
+    known types of noise need to be minimised for the analyis. """
+
     timeRefine = []
     currentRefine = []
     for i in range(1,len(timeSelect)-1):
@@ -44,6 +56,10 @@ def noiseRemover(timeSelect, currentSelect, intraPulseNoise, interPulseNoise):
     return timeRefine, currentRefine
 
 def dataSegregator(timeRefine, currentRefine, switch_s, thresh):
+    """ The input data is made up of a current pulse that alternates between a lower and a higher value, and the gap between 
+    these two values changes as the biomolecule binds. It is necessary to segregate the input data into a higher and a 
+    lower set of values for tracing this change. """
+
     timeLow = []
     timeHigh = []
     currentLow = []
@@ -63,6 +79,10 @@ def dataSegregator(timeRefine, currentRefine, switch_s, thresh):
     return timeLow, currentLow, timeHigh, currentHigh
 
 def pulseAveraging(time, current, pulseWidth):
+    """ Onc the data has been segregated, we are left with groups of data in each set of higher and lower current values. It is necessary to 
+    replace each group with an average value over that group. This produces two sets of such averaged values corresponding to the lower and 
+    higher current. """
+
     counter=0.0
     timePulseSum = 0.0
     currentPulseSum = 0.0
@@ -86,7 +106,12 @@ def pulseAveraging(time, current, pulseWidth):
     return timeAvg, currentAvg
 
 def piecewiseNonLinearInterp(fitOrder, fitWindow, fitRange, timeLowAvg, currentLowAvg, timeHighAvg, currentHighAvg, startCheck):
-
+    """ After obtaining the set of pulse-averaged higher and lower currents, it is necessary to obtain teir difference fr calculating the signsl. 
+    However, the two cannot be simply subtracted from each other directly. Due to a time gap between the adjacent points corresponding to the 
+    lower and higher values of current, interpolation needs to e used to fill up the alternating gap in both the higher and lower currents. 
+    Only then can each data point in the lower current has a corresponding point in the higher current (and vice versa) between which, 
+    the difference cn be taken. """
+    
     timeFit = []
     currentLowFit = []
     currentHighFit = []
@@ -146,6 +171,8 @@ def piecewiseNonLinearInterp(fitOrder, fitWindow, fitRange, timeLowAvg, currentL
     return timeFit, currentLowFit, currentHighFit
 
 def extractSignal (timeFit, currentLowFit, currentHighFit):
+    """ Extract the deltaI and finally the chage in zeta potential, which constitutes to the signal from the binding of 
+    the biomolecule """
     currentLowFit = np.array(currentLowFit)
     currentHighFit = np.array(currentHighFit)
     delta_I = currentHighFit - currentLowFit
